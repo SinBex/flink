@@ -53,6 +53,8 @@ import org.apache.flink.util.FlinkException;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.concurrent.FutureUtils;
 
+import io.fabric8.kubernetes.client.Watcher.Action;
+
 import javax.annotation.Nullable;
 
 import java.io.File;
@@ -308,12 +310,12 @@ public class KubernetesResourceManagerDriver
                 blockedNodes);
     }
 
-    private void handlePodEventsInMainThread(List<KubernetesPod> pods) {
+    private void handlePodEventsInMainThread(List<KubernetesPod> pods, Action action) {
         getMainThreadExecutor()
                 .execute(
                         () -> {
                             for (KubernetesPod pod : pods) {
-                                if (pod.isTerminated()) {
+                                if (action == Action.DELETED || pod.isTerminated()) {
                                     onPodTerminated(pod);
                                 } else if (pod.isScheduled()) {
                                     onPodScheduled(pod);
@@ -383,22 +385,22 @@ public class KubernetesResourceManagerDriver
             implements FlinkKubeClient.WatchCallbackHandler<KubernetesPod> {
         @Override
         public void onAdded(List<KubernetesPod> pods) {
-            handlePodEventsInMainThread(pods);
+            handlePodEventsInMainThread(pods, Action.ADDED);
         }
 
         @Override
         public void onModified(List<KubernetesPod> pods) {
-            handlePodEventsInMainThread(pods);
+            handlePodEventsInMainThread(pods, Action.MODIFIED);
         }
 
         @Override
         public void onDeleted(List<KubernetesPod> pods) {
-            handlePodEventsInMainThread(pods);
+            handlePodEventsInMainThread(pods, Action.DELETED);
         }
 
         @Override
         public void onError(List<KubernetesPod> pods) {
-            handlePodEventsInMainThread(pods);
+            handlePodEventsInMainThread(pods, Action.ERROR);
         }
 
         @Override
