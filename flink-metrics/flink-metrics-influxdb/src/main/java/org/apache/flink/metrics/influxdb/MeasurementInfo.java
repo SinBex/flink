@@ -19,6 +19,7 @@
 package org.apache.flink.metrics.influxdb;
 
 import java.util.Map;
+import java.util.Objects;
 
 final class MeasurementInfo {
     private final String name;
@@ -35,5 +36,22 @@ final class MeasurementInfo {
 
     Map<String, String> getTags() {
         return tags;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        MeasurementInfo that = (MeasurementInfo) o;
+        return name.equals(that.name) && tags.equals(that.tags);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, tags);
     }
 }

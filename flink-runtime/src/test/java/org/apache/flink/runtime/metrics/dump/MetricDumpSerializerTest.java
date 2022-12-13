@@ -53,24 +53,16 @@ class MetricDumpSerializerTest {
         MetricDumpSerialization.MetricDumpDeserializer deserializer =
                 new MetricDumpSerialization.MetricDumpDeserializer();
 
-        Map<Gauge<?>, Tuple2<QueryScopeInfo, String>> gauges = new HashMap<>();
+        Map<String, Tuple2<QueryScopeInfo, Gauge<?>>> gauges = new HashMap<>();
 
-        gauges.put(
-                new Gauge<Object>() {
-                    @Override
-                    public Object getValue() {
-                        return null;
-                    }
-                },
-                new Tuple2<QueryScopeInfo, String>(
-                        new QueryScopeInfo.JobManagerQueryScopeInfo("A"), "g"));
+        gauges.put("g", new Tuple2<>(new QueryScopeInfo.JobManagerQueryScopeInfo("A"), () -> null));
 
         MetricDumpSerialization.MetricSerializationResult output =
                 serializer.serialize(
-                        Collections.<Counter, Tuple2<QueryScopeInfo, String>>emptyMap(),
+                        Collections.emptyMap(),
                         gauges,
-                        Collections.<Histogram, Tuple2<QueryScopeInfo, String>>emptyMap(),
-                        Collections.<Meter, Tuple2<QueryScopeInfo, String>>emptyMap());
+                        Collections.emptyMap(),
+                        Collections.emptyMap());
 
         // no metrics should be serialized
         assertThat(output.serializedCounters).isEmpty();
@@ -91,10 +83,10 @@ class MetricDumpSerializerTest {
 
         oos.writeObject(
                 serializer.serialize(
-                        new HashMap<Counter, Tuple2<QueryScopeInfo, String>>(),
-                        new HashMap<Gauge<?>, Tuple2<QueryScopeInfo, String>>(),
-                        new HashMap<Histogram, Tuple2<QueryScopeInfo, String>>(),
-                        new HashMap<Meter, Tuple2<QueryScopeInfo, String>>()));
+                        new HashMap<String, Tuple2<QueryScopeInfo, Counter>>(),
+                        new HashMap<String, Tuple2<QueryScopeInfo, Gauge<?>>>(),
+                        new HashMap<String, Tuple2<QueryScopeInfo, Histogram>>(),
+                        new HashMap<String, Tuple2<QueryScopeInfo, Meter>>()));
     }
 
     @Test
@@ -104,10 +96,10 @@ class MetricDumpSerializerTest {
         MetricDumpSerialization.MetricDumpDeserializer deserializer =
                 new MetricDumpSerialization.MetricDumpDeserializer();
 
-        Map<Counter, Tuple2<QueryScopeInfo, String>> counters = new HashMap<>();
-        Map<Gauge<?>, Tuple2<QueryScopeInfo, String>> gauges = new HashMap<>();
-        Map<Histogram, Tuple2<QueryScopeInfo, String>> histograms = new HashMap<>();
-        Map<Meter, Tuple2<QueryScopeInfo, String>> meters = new HashMap<>();
+        Map<String, Tuple2<QueryScopeInfo, Counter>> counters = new HashMap<>();
+        Map<String, Tuple2<QueryScopeInfo, Gauge<?>>> gauges = new HashMap<>();
+        Map<String, Tuple2<QueryScopeInfo, Histogram>> histograms = new HashMap<>();
+        Map<String, Tuple2<QueryScopeInfo, Meter>> meters = new HashMap<>();
 
         SimpleCounter c1 = new SimpleCounter();
         SimpleCounter c2 = new SimpleCounter();
@@ -145,27 +137,27 @@ class MetricDumpSerializerTest {
                 };
 
         counters.put(
-                c1,
-                new Tuple2<QueryScopeInfo, String>(
-                        new QueryScopeInfo.JobManagerQueryScopeInfo("A"), "c1"));
+                "c1",
+                new Tuple2<QueryScopeInfo, Counter>(
+                        new QueryScopeInfo.JobManagerQueryScopeInfo("A"), c1));
         counters.put(
-                c2,
-                new Tuple2<QueryScopeInfo, String>(
-                        new QueryScopeInfo.TaskManagerQueryScopeInfo("tmid", "B"), "c2"));
+                "c2",
+                new Tuple2<QueryScopeInfo, Counter>(
+                        new QueryScopeInfo.TaskManagerQueryScopeInfo("tmid", "B"), c2));
         meters.put(
-                m1,
-                new Tuple2<QueryScopeInfo, String>(
-                        new QueryScopeInfo.JobQueryScopeInfo("jid", "C"), "c3"));
+                "c3",
+                new Tuple2<QueryScopeInfo, Meter>(
+                        new QueryScopeInfo.JobQueryScopeInfo("jid", "C"), m1));
         gauges.put(
-                g1,
-                new Tuple2<QueryScopeInfo, String>(
-                        new QueryScopeInfo.TaskQueryScopeInfo("jid", "vid", 2, 0, "D"), "g1"));
+                "g1",
+                new Tuple2<QueryScopeInfo, Gauge<?>>(
+                        new QueryScopeInfo.TaskQueryScopeInfo("jid", "vid", 2, 0, "D"), g1));
         histograms.put(
-                h1,
-                new Tuple2<QueryScopeInfo, String>(
+                "h1",
+                new Tuple2<QueryScopeInfo, Histogram>(
                         new QueryScopeInfo.OperatorQueryScopeInfo(
                                 "jid", "vid", 2, 0, "opname", "E"),
-                        "h1"));
+                        h1));
 
         MetricDumpSerialization.MetricSerializationResult serialized =
                 serializer.serialize(counters, gauges, histograms, meters);
@@ -185,7 +177,7 @@ class MetricDumpSerializerTest {
                                     .isInstanceOf(QueryScopeInfo.JobManagerQueryScopeInfo.class);
                             assertThat(counterDump.scopeInfo.scope).isEqualTo("A");
                             assertThat(counterDump.name).isEqualTo("c1");
-                            counters.remove(c1);
+                            counters.remove("c1");
                             break;
                         case 2:
                             assertThat(counterDump.scopeInfo)
@@ -197,7 +189,7 @@ class MetricDumpSerializerTest {
                                             ((QueryScopeInfo.TaskManagerQueryScopeInfo)
                                                             counterDump.scopeInfo)
                                                     .taskManagerID);
-                            counters.remove(c2);
+                            counters.remove("c2");
                             break;
                         default:
                             fail("Unexpected counter count.");
@@ -216,7 +208,7 @@ class MetricDumpSerializerTest {
                     assertThat(taskInfo.jobID).isEqualTo("jid");
                     assertThat(taskInfo.vertexID).isEqualTo("vid");
                     assertThat(taskInfo.subtaskIndex).isEqualTo(2);
-                    gauges.remove(g1);
+                    gauges.remove("g1");
                     break;
                 case METRIC_CATEGORY_HISTOGRAM:
                     MetricDump.HistogramDump histogramDump = (MetricDump.HistogramDump) metric;
@@ -242,7 +234,7 @@ class MetricDumpSerializerTest {
                     assertThat(opInfo.vertexID).isEqualTo("vid");
                     assertThat(opInfo.subtaskIndex).isEqualTo(2);
                     assertThat(opInfo.operatorName).isEqualTo("opname");
-                    histograms.remove(h1);
+                    histograms.remove("h1");
                     break;
                 case METRIC_CATEGORY_METER:
                     MetricDump.MeterDump meterDump = (MetricDump.MeterDump) metric;

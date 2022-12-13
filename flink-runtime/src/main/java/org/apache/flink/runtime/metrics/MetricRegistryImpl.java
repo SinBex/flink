@@ -427,7 +427,7 @@ public class MetricRegistryImpl implements MetricRegistry, AutoCloseableAsync {
                 }
                 try {
                     if (queryService != null) {
-                        queryService.removeMetric(metric);
+                        queryService.removeMetric(metric, metricName);
                     }
                 } catch (Exception e) {
                     LOG.warn("Error while unregistering metric: {}.", metricName, e);

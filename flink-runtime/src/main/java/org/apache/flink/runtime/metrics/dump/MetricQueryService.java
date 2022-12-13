@@ -67,10 +67,10 @@ public class MetricQueryService extends RpcEndpoint implements MetricQueryServic
 
     private final MetricDumpSerializer serializer = new MetricDumpSerializer();
 
-    private final Map<Gauge<?>, Tuple2<QueryScopeInfo, String>> gauges = new HashMap<>();
-    private final Map<Counter, Tuple2<QueryScopeInfo, String>> counters = new HashMap<>();
-    private final Map<Histogram, Tuple2<QueryScopeInfo, String>> histograms = new HashMap<>();
-    private final Map<Meter, Tuple2<QueryScopeInfo, String>> meters = new HashMap<>();
+    private final Map<String, Tuple2<QueryScopeInfo, Gauge<?>>> gauges = new HashMap<>();
+    private final Map<String, Tuple2<QueryScopeInfo, Counter>> counters = new HashMap<>();
+    private final Map<String, Tuple2<QueryScopeInfo, Histogram>> histograms = new HashMap<>();
+    private final Map<String, Tuple2<QueryScopeInfo, Meter>> meters = new HashMap<>();
 
     private final long messageSizeLimit;
 
@@ -92,35 +92,35 @@ public class MetricQueryService extends RpcEndpoint implements MetricQueryServic
 
                     if (metric instanceof Counter) {
                         counters.put(
-                                (Counter) metric,
-                                new Tuple2<>(info, FILTER.filterCharacters(metricName)));
+                                FILTER.filterCharacters(metricName),
+                                new Tuple2<>(info, (Counter) metric));
                     } else if (metric instanceof Gauge) {
                         gauges.put(
-                                (Gauge<?>) metric,
-                                new Tuple2<>(info, FILTER.filterCharacters(metricName)));
+                                FILTER.filterCharacters(metricName),
+                                new Tuple2<>(info, (Gauge<?>) metric));
                     } else if (metric instanceof Histogram) {
                         histograms.put(
-                                (Histogram) metric,
-                                new Tuple2<>(info, FILTER.filterCharacters(metricName)));
+                                FILTER.filterCharacters(metricName),
+                                new Tuple2<>(info, (Histogram) metric));
                     } else if (metric instanceof Meter) {
                         meters.put(
-                                (Meter) metric,
-                                new Tuple2<>(info, FILTER.filterCharacters(metricName)));
+                                FILTER.filterCharacters(metricName),
+                                new Tuple2<>(info, (Meter) metric));
                     }
                 });
     }
 
-    public void removeMetric(Metric metric) {
+    public void removeMetric(Metric metric, String metricName) {
         runAsync(
                 () -> {
                     if (metric instanceof Counter) {
-                        this.counters.remove(metric);
+                        this.counters.remove(metricName);
                     } else if (metric instanceof Gauge) {
-                        this.gauges.remove(metric);
+                        this.gauges.remove(metricName);
                     } else if (metric instanceof Histogram) {
-                        this.histograms.remove(metric);
+                        this.histograms.remove(metricName);
                     } else if (metric instanceof Meter) {
-                        this.meters.remove(metric);
+                        this.meters.remove(metricName);
                     }
                 });
     }

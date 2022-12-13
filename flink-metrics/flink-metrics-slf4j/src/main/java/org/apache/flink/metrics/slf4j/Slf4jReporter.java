@@ -46,22 +46,22 @@ public class Slf4jReporter extends AbstractReporter implements Scheduled {
     private int previousSize = 16384;
 
     @VisibleForTesting
-    Map<Gauge<?>, String> getGauges() {
+    Map<String, Gauge<?>> getGauges() {
         return gauges;
     }
 
     @VisibleForTesting
-    Map<Counter, String> getCounters() {
+    Map<String, Counter> getCounters() {
         return counters;
     }
 
     @VisibleForTesting
-    Map<Histogram, String> getHistograms() {
+    Map<String, Histogram> getHistograms() {
         return histograms;
     }
 
     @VisibleForTesting
-    Map<Meter, String> getMeters() {
+    Map<String, Meter> getMeters() {
         return meters;
     }
 
@@ -98,10 +98,10 @@ public class Slf4jReporter extends AbstractReporter implements Scheduled {
                 .append(
                         "-- Counters -------------------------------------------------------------------")
                 .append(lineSeparator);
-        for (Map.Entry<Counter, String> metric : counters.entrySet()) {
-            builder.append(metric.getValue())
+        for (Map.Entry<String, Counter> metric : counters.entrySet()) {
+            builder.append(metric.getKey())
                     .append(": ")
-                    .append(metric.getKey().getCount())
+                    .append(metric.getValue().getCount())
                     .append(lineSeparator);
         }
 
@@ -109,10 +109,10 @@ public class Slf4jReporter extends AbstractReporter implements Scheduled {
                 .append(
                         "-- Gauges ---------------------------------------------------------------------")
                 .append(lineSeparator);
-        for (Map.Entry<Gauge<?>, String> metric : gauges.entrySet()) {
-            builder.append(metric.getValue())
+        for (Map.Entry<String, Gauge<?>> metric : gauges.entrySet()) {
+            builder.append(metric.getKey())
                     .append(": ")
-                    .append(metric.getKey().getValue())
+                    .append(metric.getValue().getValue())
                     .append(lineSeparator);
         }
 
@@ -120,10 +120,10 @@ public class Slf4jReporter extends AbstractReporter implements Scheduled {
                 .append(
                         "-- Meters ---------------------------------------------------------------------")
                 .append(lineSeparator);
-        for (Map.Entry<Meter, String> metric : meters.entrySet()) {
-            builder.append(metric.getValue())
+        for (Map.Entry<String, Meter> metric : meters.entrySet()) {
+            builder.append(metric.getKey())
                     .append(": ")
-                    .append(metric.getKey().getRate())
+                    .append(metric.getValue().getRate())
                     .append(lineSeparator);
         }
 
@@ -131,9 +131,9 @@ public class Slf4jReporter extends AbstractReporter implements Scheduled {
                 .append(
                         "-- Histograms -----------------------------------------------------------------")
                 .append(lineSeparator);
-        for (Map.Entry<Histogram, String> metric : histograms.entrySet()) {
-            HistogramStatistics stats = metric.getKey().getStatistics();
-            builder.append(metric.getValue())
+        for (Map.Entry<String, Histogram> metric : histograms.entrySet()) {
+            HistogramStatistics stats = metric.getValue().getStatistics();
+            builder.append(metric.getKey())
                     .append(": count=")
                     .append(stats.size())
                     .append(", min=")

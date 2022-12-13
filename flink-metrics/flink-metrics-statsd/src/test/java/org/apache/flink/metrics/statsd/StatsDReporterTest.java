@@ -77,16 +77,17 @@ class StatsDReporterTest {
         SimpleCounter myCounter = new SimpleCounter();
         reporter.notifyOfAddedMetric(myCounter, counterName, metricGroup);
 
-        Map<Counter, String> counters = reporter.getCounters();
+        Map<String, Counter> counters = reporter.getCounters();
 
-        assertThat(counters).containsKey(myCounter);
+        assertThat(counters).containsValue(myCounter);
 
         String expectedCounterName =
                 reporter.filterCharacters(scope)
                         + delimiter
                         + reporter.filterCharacters(counterName);
 
-        assertThat(counters.get(myCounter)).isEqualTo(expectedCounterName);
+        assertThat(counters).containsKey(expectedCounterName);
+        assertThat(counters.get(expectedCounterName)).isEqualTo(myCounter);
     }
 
     /** Tests that histograms are properly reported via the StatsD reporter. */
@@ -247,7 +248,7 @@ class StatsDReporterTest {
             // disable the socket creation
         }
 
-        public Map<Counter, String> getCounters() {
+        public Map<String, Counter> getCounters() {
             return counters;
         }
     }

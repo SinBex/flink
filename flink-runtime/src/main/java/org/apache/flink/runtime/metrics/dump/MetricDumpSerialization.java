@@ -140,20 +140,20 @@ public class MetricDumpSerialization {
          *     metric type
          */
         public MetricSerializationResult serialize(
-                Map<Counter, Tuple2<QueryScopeInfo, String>> counters,
-                Map<Gauge<?>, Tuple2<QueryScopeInfo, String>> gauges,
-                Map<Histogram, Tuple2<QueryScopeInfo, String>> histograms,
-                Map<Meter, Tuple2<QueryScopeInfo, String>> meters) {
+                Map<String, Tuple2<QueryScopeInfo, Counter>> counters,
+                Map<String, Tuple2<QueryScopeInfo, Gauge<?>>> gauges,
+                Map<String, Tuple2<QueryScopeInfo, Histogram>> histograms,
+                Map<String, Tuple2<QueryScopeInfo, Meter>> meters) {
 
             countersBuffer.clear();
             int numCounters = 0;
-            for (Map.Entry<Counter, Tuple2<QueryScopeInfo, String>> entry : counters.entrySet()) {
+            for (Map.Entry<String, Tuple2<QueryScopeInfo, Counter>> entry : counters.entrySet()) {
                 try {
                     serializeCounter(
                             countersBuffer,
                             entry.getValue().f0,
-                            entry.getValue().f1,
-                            entry.getKey());
+                            entry.getKey(),
+                            entry.getValue().f1);
                     numCounters++;
                 } catch (Exception e) {
                     LOG.debug("Failed to serialize counter.", e);
@@ -162,10 +162,10 @@ public class MetricDumpSerialization {
 
             gaugesBuffer.clear();
             int numGauges = 0;
-            for (Map.Entry<Gauge<?>, Tuple2<QueryScopeInfo, String>> entry : gauges.entrySet()) {
+            for (Map.Entry<String, Tuple2<QueryScopeInfo, Gauge<?>>> entry : gauges.entrySet()) {
                 try {
                     serializeGauge(
-                            gaugesBuffer, entry.getValue().f0, entry.getValue().f1, entry.getKey());
+                            gaugesBuffer, entry.getValue().f0, entry.getKey(), entry.getValue().f1);
                     numGauges++;
                 } catch (Exception e) {
                     LOG.debug("Failed to serialize gauge.", e);
@@ -174,14 +174,14 @@ public class MetricDumpSerialization {
 
             histogramsBuffer.clear();
             int numHistograms = 0;
-            for (Map.Entry<Histogram, Tuple2<QueryScopeInfo, String>> entry :
+            for (Map.Entry<String, Tuple2<QueryScopeInfo, Histogram>> entry :
                     histograms.entrySet()) {
                 try {
                     serializeHistogram(
                             histogramsBuffer,
                             entry.getValue().f0,
-                            entry.getValue().f1,
-                            entry.getKey());
+                            entry.getKey(),
+                            entry.getValue().f1);
                     numHistograms++;
                 } catch (Exception e) {
                     LOG.debug("Failed to serialize histogram.", e);
@@ -190,10 +190,10 @@ public class MetricDumpSerialization {
 
             metersBuffer.clear();
             int numMeters = 0;
-            for (Map.Entry<Meter, Tuple2<QueryScopeInfo, String>> entry : meters.entrySet()) {
+            for (Map.Entry<String, Tuple2<QueryScopeInfo, Meter>> entry : meters.entrySet()) {
                 try {
                     serializeMeter(
-                            metersBuffer, entry.getValue().f0, entry.getValue().f1, entry.getKey());
+                            metersBuffer, entry.getValue().f0, entry.getKey(), entry.getValue().f1);
                     numMeters++;
                 } catch (Exception e) {
                     LOG.debug("Failed to serialize meter.", e);

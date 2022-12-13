@@ -114,10 +114,10 @@ class MetricFetcherTest {
 
     private static MetricDumpSerialization.MetricSerializationResult createRequestDumpAnswer(
             ResourceID tmRID, JobID jobID) {
-        Map<Counter, Tuple2<QueryScopeInfo, String>> counters = new HashMap<>();
-        Map<Gauge<?>, Tuple2<QueryScopeInfo, String>> gauges = new HashMap<>();
-        Map<Histogram, Tuple2<QueryScopeInfo, String>> histograms = new HashMap<>();
-        Map<Meter, Tuple2<QueryScopeInfo, String>> meters = new HashMap<>();
+        Map<String, Tuple2<QueryScopeInfo, Counter>> counters = new HashMap<>();
+        Map<String, Tuple2<QueryScopeInfo, Gauge<?>>> gauges = new HashMap<>();
+        Map<String, Tuple2<QueryScopeInfo, Histogram>> histograms = new HashMap<>();
+        Map<String, Tuple2<QueryScopeInfo, Meter>> meters = new HashMap<>();
 
         SimpleCounter c1 = new SimpleCounter();
         SimpleCounter c2 = new SimpleCounter();
@@ -126,49 +126,52 @@ class MetricFetcherTest {
         c2.inc(2);
 
         counters.put(
-                c1,
+                "oc",
                 new Tuple2<>(
                         new QueryScopeInfo.OperatorQueryScopeInfo(
                                 jobID.toString(), "taskid", 2, 0, "opname", "abc"),
-                        "oc"));
+                        c1));
         counters.put(
-                c2,
+                "tc",
                 new Tuple2<>(
                         new QueryScopeInfo.TaskQueryScopeInfo(
                                 jobID.toString(), "taskid", 2, 0, "abc"),
-                        "tc"));
+                        c2));
         meters.put(
-                new Meter() {
-                    @Override
-                    public void markEvent() {}
+                "jc",
+                new Tuple2<>(
+                        new QueryScopeInfo.JobQueryScopeInfo(jobID.toString(), "abc"),
+                        new Meter() {
+                            @Override
+                            public void markEvent() {}
 
-                    @Override
-                    public void markEvent(long n) {}
+                            @Override
+                            public void markEvent(long n) {}
 
-                    @Override
-                    public double getRate() {
-                        return 5;
-                    }
+                            @Override
+                            public double getRate() {
+                                return 5;
+                            }
 
-                    @Override
-                    public long getCount() {
-                        return 10;
-                    }
-                },
-                new Tuple2<>(new QueryScopeInfo.JobQueryScopeInfo(jobID.toString(), "abc"), "jc"));
+                            @Override
+                            public long getCount() {
+                                return 10;
+                            }
+                        }));
         gauges.put(
-                new Gauge<String>() {
-                    @Override
-                    public String getValue() {
-                        return "x";
-                    }
-                },
+                "gauge",
                 new Tuple2<>(
                         new QueryScopeInfo.TaskManagerQueryScopeInfo(tmRID.toString(), "abc"),
-                        "gauge"));
+                        new Gauge<String>() {
+                            @Override
+                            public String getValue() {
+                                return "x";
+                            }
+                        }));
         histograms.put(
-                new TestHistogram(),
-                new Tuple2<>(new QueryScopeInfo.JobManagerQueryScopeInfo("abc"), "hist"));
+                "hist",
+                new Tuple2<>(
+                        new QueryScopeInfo.JobManagerQueryScopeInfo("abc"), new TestHistogram()));
 
         MetricDumpSerialization.MetricDumpSerializer serializer =
                 new MetricDumpSerialization.MetricDumpSerializer();

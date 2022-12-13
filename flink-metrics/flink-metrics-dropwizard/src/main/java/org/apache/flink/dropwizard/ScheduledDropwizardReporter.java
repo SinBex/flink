@@ -69,10 +69,10 @@ public abstract class ScheduledDropwizardReporter
 
     protected ScheduledReporter reporter;
 
-    private final Map<Gauge<?>, String> gauges = new HashMap<>();
-    private final Map<Counter, String> counters = new HashMap<>();
-    private final Map<Histogram, String> histograms = new HashMap<>();
-    private final Map<Meter, String> meters = new HashMap<>();
+    private final Map<String, Gauge<?>> gauges = new HashMap<>();
+    private final Map<String, Counter> counters = new HashMap<>();
+    private final Map<String, Histogram> histograms = new HashMap<>();
+    private final Map<String, Meter> meters = new HashMap<>();
 
     // ------------------------------------------------------------------------
 
@@ -85,22 +85,22 @@ public abstract class ScheduledDropwizardReporter
     // ------------------------------------------------------------------------
 
     @VisibleForTesting
-    Map<Counter, String> getCounters() {
+    Map<String, Counter> getCounters() {
         return counters;
     }
 
     @VisibleForTesting
-    Map<Meter, String> getMeters() {
+    Map<String, Meter> getMeters() {
         return meters;
     }
 
     @VisibleForTesting
-    Map<Gauge<?>, String> getGauges() {
+    Map<String, Gauge<?>> getGauges() {
         return gauges;
     }
 
     @VisibleForTesting
-    Map<Histogram, String> getHistograms() {
+    Map<String, Histogram> getHistograms() {
         return histograms;
     }
 
@@ -129,16 +129,16 @@ public abstract class ScheduledDropwizardReporter
         synchronized (this) {
             switch (metric.getMetricType()) {
                 case COUNTER:
-                    counters.put((Counter) metric, fullName);
+                    counters.put(fullName, (Counter) metric);
                     registry.register(fullName, new FlinkCounterWrapper((Counter) metric));
                     break;
                 case GAUGE:
-                    gauges.put((Gauge<?>) metric, fullName);
+                    gauges.put(fullName, (Gauge<?>) metric);
                     registry.register(fullName, FlinkGaugeWrapper.fromGauge((Gauge<?>) metric));
                     break;
                 case HISTOGRAM:
                     Histogram histogram = (Histogram) metric;
-                    histograms.put(histogram, fullName);
+                    histograms.put(fullName, histogram);
 
                     if (histogram instanceof DropwizardHistogramWrapper) {
                         registry.register(
@@ -150,7 +150,7 @@ public abstract class ScheduledDropwizardReporter
                     break;
                 case METER:
                     Meter meter = (Meter) metric;
-                    meters.put(meter, fullName);
+                    meters.put(fullName, meter);
 
                     if (meter instanceof DropwizardMeterWrapper) {
                         registry.register(
@@ -170,28 +170,35 @@ public abstract class ScheduledDropwizardReporter
 
     @Override
     public void notifyOfRemovedMetric(Metric metric, String metricName, MetricGroup group) {
-        synchronized (this) {
-            String fullName;
+        final String fullName = group.getMetricIdentifier(metricName, this);
 
+        synchronized (this) {
             switch (metric.getMetricType()) {
                 case COUNTER:
-                    fullName = counters.remove(metric);
+                    counters.remove(fullName);
                     break;
                 case GAUGE:
-                    fullName = gauges.remove(metric);
+                    gauges.remove(fullName);
                     break;
                 case HISTOGRAM:
-                    fullName = histograms.remove(metric);
+                    histograms.remove(fullName);
                     break;
                 case METER:
-                    fullName = meters.remove(metric);
+                    meters.remove(fullName);
                     break;
                 default:
-                    fullName = null;
+                    log.warn(
+                            "Cannot remove metric of type {}. This indicates that the reporter "
+                                    + "does not support this metric type.",
+                            metric.getClass().getName());
             }
 
-            if (fullName != null) {
-                registry.remove(fullName);
+            boolean metricRemoved = registry.remove(fullName);
+            if (!metricRemoved) {
+                log.warn(
+                        "Unregister metric {} of type {} failed.",
+                        fullName,
+                        metric.getClass().getName());
             }
         }
     }

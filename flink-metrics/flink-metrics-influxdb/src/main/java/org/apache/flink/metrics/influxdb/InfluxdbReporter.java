@@ -134,20 +134,20 @@ public class InfluxdbReporter extends AbstractReporter<MeasurementInfo> implemen
         report.retentionPolicy(retentionPolicy);
         report.consistency(consistency);
         try {
-            for (Map.Entry<Gauge<?>, MeasurementInfo> entry : gauges.entrySet()) {
-                report.point(MetricMapper.map(entry.getValue(), timestamp, entry.getKey()));
+            for (Map.Entry<MeasurementInfo, Gauge<?>> entry : gauges.entrySet()) {
+                report.point(MetricMapper.map(entry.getKey(), timestamp, entry.getValue()));
             }
 
-            for (Map.Entry<Counter, MeasurementInfo> entry : counters.entrySet()) {
-                report.point(MetricMapper.map(entry.getValue(), timestamp, entry.getKey()));
+            for (Map.Entry<MeasurementInfo, Counter> entry : counters.entrySet()) {
+                report.point(MetricMapper.map(entry.getKey(), timestamp, entry.getValue()));
             }
 
-            for (Map.Entry<Histogram, MeasurementInfo> entry : histograms.entrySet()) {
-                report.point(MetricMapper.map(entry.getValue(), timestamp, entry.getKey()));
+            for (Map.Entry<MeasurementInfo, Histogram> entry : histograms.entrySet()) {
+                report.point(MetricMapper.map(entry.getKey(), timestamp, entry.getValue()));
             }
 
-            for (Map.Entry<Meter, MeasurementInfo> entry : meters.entrySet()) {
-                report.point(MetricMapper.map(entry.getValue(), timestamp, entry.getKey()));
+            for (Map.Entry<MeasurementInfo, Meter> entry : meters.entrySet()) {
+                report.point(MetricMapper.map(entry.getKey(), timestamp, entry.getValue()));
             }
         } catch (ConcurrentModificationException | NoSuchElementException e) {
             // ignore - may happen when metrics are concurrently added or removed

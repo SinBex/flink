@@ -74,8 +74,9 @@ class InfluxdbReporterTest {
         Counter counter = new SimpleCounter();
         reporter.notifyOfAddedMetric(counter, metricName, metricGroup);
 
-        MeasurementInfo measurementInfo = reporter.counters.get(counter);
-        assertThat(measurementInfo).isNotNull();
+        MeasurementInfoProvider metricInfoProvider = new MeasurementInfoProvider();
+        MeasurementInfo measurementInfo = metricInfoProvider.getMetricInfo(metricName, metricGroup);
+        assertThat(reporter.counters.containsKey(measurementInfo)).isTrue();
         assertThat(measurementInfo.getName()).isEqualTo("taskmanager_" + metricName);
         assertThat(measurementInfo.getTags()).containsEntry("host", METRIC_HOSTNAME);
     }

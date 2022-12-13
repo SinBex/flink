@@ -98,10 +98,10 @@ public class MetricQueryServiceTest extends TestLogger {
         assertTrue(dump.serializedHistograms.length > 0);
         assertTrue(dump.serializedMeters.length > 0);
 
-        queryService.removeMetric(c);
-        queryService.removeMetric(g);
-        queryService.removeMetric(h);
-        queryService.removeMetric(m);
+        queryService.removeMetric(c, "counter");
+        queryService.removeMetric(g, "gauge");
+        queryService.removeMetric(h, "histogram");
+        queryService.removeMetric(m, "meter");
 
         MetricDumpSerialization.MetricSerializationResult emptyDump =
                 queryService.queryMetrics(TIMEOUT).get();
@@ -152,7 +152,7 @@ public class MetricQueryServiceTest extends TestLogger {
 
         // unregister all but one gauge to ensure gauges are reported again if the remaining fit
         for (int x = 1; x < gauges.size(); x++) {
-            queryService.removeMetric(gauges.get(x).f1);
+            queryService.removeMetric(gauges.get(x).f1, gauges.get(x).f0);
         }
 
         MetricDumpSerialization.MetricSerializationResult recoveredDump =

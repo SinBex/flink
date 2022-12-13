@@ -68,7 +68,7 @@ class Slf4jReporterTest {
         SimpleCounter counter = new SimpleCounter();
         reporter.notifyOfAddedMetric(counter, counterName, metricGroup);
 
-        assertThat(reporter.getCounters()).containsKey(counter);
+        assertThat(reporter.getCounters()).containsValue(counter);
 
         String expectedCounterReport =
                 reporter.filterCharacters(SCOPE)
@@ -87,7 +87,7 @@ class Slf4jReporterTest {
 
         Gauge<Long> gauge = () -> null;
         reporter.notifyOfAddedMetric(gauge, gaugeName, metricGroup);
-        assertThat(reporter.getGauges()).containsKey(gauge);
+        assertThat(reporter.getGauges()).containsValue(gauge);
 
         String expectedGaugeReport =
                 reporter.filterCharacters(SCOPE)
@@ -106,7 +106,7 @@ class Slf4jReporterTest {
 
         Meter meter = new MeterView(5);
         reporter.notifyOfAddedMetric(meter, meterName, metricGroup);
-        assertThat(reporter.getMeters()).containsKey(meter);
+        assertThat(reporter.getMeters()).containsValue(meter);
 
         String expectedMeterReport =
                 reporter.filterCharacters(SCOPE)
@@ -125,7 +125,7 @@ class Slf4jReporterTest {
 
         Histogram histogram = new TestHistogram();
         reporter.notifyOfAddedMetric(histogram, histogramName, metricGroup);
-        assertThat(reporter.getHistograms()).containsKey(histogram);
+        assertThat(reporter.getHistograms()).containsValue(histogram);
 
         String expectedHistogramName =
                 reporter.filterCharacters(SCOPE)

@@ -41,10 +41,10 @@ import java.util.Map;
 abstract class AbstractReporter<MetricInfo> implements MetricReporter {
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
-    protected final Map<Gauge<?>, MetricInfo> gauges = new HashMap<>();
-    protected final Map<Counter, MetricInfo> counters = new HashMap<>();
-    protected final Map<Histogram, MetricInfo> histograms = new HashMap<>();
-    protected final Map<Meter, MetricInfo> meters = new HashMap<>();
+    protected final Map<MetricInfo, Gauge<?>> gauges = new HashMap<>();
+    protected final Map<MetricInfo, Counter> counters = new HashMap<>();
+    protected final Map<MetricInfo, Histogram> histograms = new HashMap<>();
+    protected final Map<MetricInfo, Meter> meters = new HashMap<>();
     protected final MetricInfoProvider<MetricInfo> metricInfoProvider;
 
     protected AbstractReporter(MetricInfoProvider<MetricInfo> metricInfoProvider) {
@@ -57,16 +57,16 @@ abstract class AbstractReporter<MetricInfo> implements MetricReporter {
         synchronized (this) {
             switch (metric.getMetricType()) {
                 case COUNTER:
-                    counters.put((Counter) metric, metricInfo);
+                    counters.put(metricInfo, (Counter) metric);
                     break;
                 case GAUGE:
-                    gauges.put((Gauge<?>) metric, metricInfo);
+                    gauges.put(metricInfo, (Gauge<?>) metric);
                     break;
                 case HISTOGRAM:
-                    histograms.put((Histogram) metric, metricInfo);
+                    histograms.put(metricInfo, (Histogram) metric);
                     break;
                 case METER:
-                    meters.put((Meter) metric, metricInfo);
+                    meters.put(metricInfo, (Meter) metric);
                     break;
                 default:
                     log.warn(
@@ -79,19 +79,20 @@ abstract class AbstractReporter<MetricInfo> implements MetricReporter {
 
     @Override
     public void notifyOfRemovedMetric(Metric metric, String metricName, MetricGroup group) {
+        final MetricInfo metricInfo = metricInfoProvider.getMetricInfo(metricName, group);
         synchronized (this) {
             switch (metric.getMetricType()) {
                 case COUNTER:
-                    counters.remove(metric);
+                    counters.remove(metricInfo);
                     break;
                 case GAUGE:
-                    gauges.remove(metric);
+                    gauges.remove(metricInfo);
                     break;
                 case HISTOGRAM:
-                    histograms.remove(metric);
+                    histograms.remove(metricInfo);
                     break;
                 case METER:
-                    meters.remove(metric);
+                    meters.remove(metricInfo);
                     break;
                 default:
                     log.warn(

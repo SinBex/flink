@@ -38,10 +38,10 @@ import java.util.Map;
 public abstract class AbstractReporter implements MetricReporter, CharacterFilter {
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
-    protected final Map<Gauge<?>, String> gauges = new HashMap<>();
-    protected final Map<Counter, String> counters = new HashMap<>();
-    protected final Map<Histogram, String> histograms = new HashMap<>();
-    protected final Map<Meter, String> meters = new HashMap<>();
+    protected final Map<String, Gauge<?>> gauges = new HashMap<>();
+    protected final Map<String, Counter> counters = new HashMap<>();
+    protected final Map<String, Histogram> histograms = new HashMap<>();
+    protected final Map<String, Meter> meters = new HashMap<>();
 
     @Override
     public void notifyOfAddedMetric(Metric metric, String metricName, MetricGroup group) {
@@ -50,16 +50,16 @@ public abstract class AbstractReporter implements MetricReporter, CharacterFilte
         synchronized (this) {
             switch (metric.getMetricType()) {
                 case COUNTER:
-                    counters.put((Counter) metric, name);
+                    counters.put(name, (Counter) metric);
                     break;
                 case GAUGE:
-                    gauges.put((Gauge<?>) metric, name);
+                    gauges.put(name, (Gauge<?>) metric);
                     break;
                 case HISTOGRAM:
-                    histograms.put((Histogram) metric, name);
+                    histograms.put(name, (Histogram) metric);
                     break;
                 case METER:
-                    meters.put((Meter) metric, name);
+                    meters.put(name, (Meter) metric);
                     break;
                 default:
                     log.warn(
@@ -75,16 +75,16 @@ public abstract class AbstractReporter implements MetricReporter, CharacterFilte
         synchronized (this) {
             switch (metric.getMetricType()) {
                 case COUNTER:
-                    counters.remove(metric);
+                    counters.remove(metricName);
                     break;
                 case GAUGE:
-                    gauges.remove(metric);
+                    gauges.remove(metricName);
                     break;
                 case HISTOGRAM:
-                    histograms.remove(metric);
+                    histograms.remove(metricName);
                     break;
                 case METER:
-                    meters.remove(metric);
+                    meters.remove(metricName);
                     break;
                 default:
                     log.warn(

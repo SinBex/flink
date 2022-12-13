@@ -82,18 +82,18 @@ class ScheduledDropwizardReporterTest {
         reporter.notifyOfAddedMetric(myCounter, counterName, metricGroup);
         reporter.notifyOfAddedMetric(meterWrapper, "meter", metricGroup);
 
-        Map<Counter, String> counters = reporter.getCounters();
-        assertThat(counters).containsKey(myCounter);
+        Map<String, Counter> counters = reporter.getCounters();
+        assertThat(counters).containsValue(myCounter);
 
-        Map<Meter, String> meters = reporter.getMeters();
-        assertThat(meters).containsKey(meterWrapper);
+        Map<String, Meter> meters = reporter.getMeters();
+        assertThat(meters).containsValue(meterWrapper);
 
         String expectedCounterName =
                 reporter.filterCharacters(scope)
                         + delimiter
                         + reporter.filterCharacters(counterName);
 
-        assertThat(counters).containsEntry(myCounter, expectedCounterName);
+        assertThat(counters).containsEntry(expectedCounterName, myCounter);
     }
 
     /**

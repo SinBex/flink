@@ -97,26 +97,26 @@ public class StatsDReporter extends AbstractReporter implements Scheduled {
         // we do this to prevent holding the lock for very long and blocking
         // operator creation and shutdown
         try {
-            for (Map.Entry<Gauge<?>, String> entry : gauges.entrySet()) {
+            for (Map.Entry<String, Gauge<?>> entry : gauges.entrySet()) {
                 if (closed) {
                     return;
                 }
-                reportGauge(entry.getValue(), entry.getKey());
+                reportGauge(entry.getKey(), entry.getValue());
             }
 
-            for (Map.Entry<Counter, String> entry : counters.entrySet()) {
+            for (Map.Entry<String, Counter> entry : counters.entrySet()) {
                 if (closed) {
                     return;
                 }
-                reportCounter(entry.getValue(), entry.getKey());
+                reportCounter(entry.getKey(), entry.getValue());
             }
 
-            for (Map.Entry<Histogram, String> entry : histograms.entrySet()) {
-                reportHistogram(entry.getValue(), entry.getKey());
+            for (Map.Entry<String, Histogram> entry : histograms.entrySet()) {
+                reportHistogram(entry.getKey(), entry.getValue());
             }
 
-            for (Map.Entry<Meter, String> entry : meters.entrySet()) {
-                reportMeter(entry.getValue(), entry.getKey());
+            for (Map.Entry<String, Meter> entry : meters.entrySet()) {
+                reportMeter(entry.getKey(), entry.getValue());
             }
         } catch (ConcurrentModificationException | NoSuchElementException e) {
             // ignore - may happen when metrics are concurrently added or removed
