@@ -176,6 +176,15 @@ public class OptimizerConfigOptions {
                             "A flag to enable or disable the runtime filter. "
                                     + "When it is true, the optimizer will try to inject a runtime filter for eligible join.");
 
+    @Documentation.TableOption(execMode = Documentation.ExecMode.BATCH)
+    public static final ConfigOption<Boolean> TABLE_OPTIMIZER_ADAPTIVE_JOIN_ENABLED =
+            key("table.optimizer.adaptive-join.enabled")
+                    .booleanType()
+                    .defaultValue(true)
+                    .withDescription(
+                            "A flag to enable or disable the adaptive join. "
+                                    + "When it is true, the optimizer will replace eligible join to adaptive join.");
+
     /**
      * The data volume of build side needs to be under this value. If the data volume of build side
      * is too large, the building overhead will be too large, which may lead to a negative impact on

@@ -42,6 +42,7 @@ object FlinkBatchProgram {
   val PHYSICAL_REWRITE = "physical_rewrite"
   val DYNAMIC_PARTITION_PRUNING = "dynamic_partition_pruning"
   val RUNTIME_FILTER = "runtime_filter"
+  val ADAPTIVE_JOIN = "adaptive_join"
 
   def buildProgram(tableConfig: ReadableConfig): FlinkChainedProgram[BatchOptimizeContext] = {
     val chainedProgram = new FlinkChainedProgram[BatchOptimizeContext]()
@@ -295,6 +296,7 @@ object FlinkBatchProgram {
 
     // runtime filter optimization
     chainedProgram.addLast(RUNTIME_FILTER, new FlinkRuntimeFilterProgram)
+    chainedProgram.addLast(ADAPTIVE_JOIN, new FlinkAdaptiveJoinProgram)
 
     chainedProgram
   }

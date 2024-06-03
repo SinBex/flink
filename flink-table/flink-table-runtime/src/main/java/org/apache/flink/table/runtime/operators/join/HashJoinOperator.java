@@ -74,8 +74,9 @@ public abstract class HashJoinOperator extends TableStreamOperator<RowData>
     private final HashJoinParameter parameter;
     private final boolean reverseJoinFunction;
     private final HashJoinType type;
-    private final boolean leftIsBuild;
-    private final SortMergeJoinFunction sortMergeJoinFunction;
+    private boolean leftIsBuild;
+
+    protected final SortMergeJoinFunction sortMergeJoinFunction;
 
     private transient BinaryHashTable table;
     transient Collector<RowData> collector;
@@ -95,6 +96,10 @@ public abstract class HashJoinOperator extends TableStreamOperator<RowData>
         this.leftIsBuild = parameter.leftIsBuild;
         this.reverseJoinFunction = parameter.reverseJoinFunction;
         this.sortMergeJoinFunction = parameter.sortMergeJoinFunction;
+    }
+
+    public void reApply(boolean leftIsBuild) {
+        this.leftIsBuild = leftIsBuild;
     }
 
     @Override
