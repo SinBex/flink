@@ -32,6 +32,7 @@ import org.apache.flink.table.planner.delegation.PlannerBase;
 import org.apache.flink.table.planner.plan.fusion.OpFusionCodegenSpecGenerator;
 import org.apache.flink.table.planner.plan.fusion.generator.TwoInputOpFusionCodegenSpecGenerator;
 import org.apache.flink.table.planner.plan.fusion.spec.HashJoinFusionCodegenSpec;
+import org.apache.flink.table.planner.plan.nodes.exec.AdaptiveBroadcastJoinExecNode;
 import org.apache.flink.table.planner.plan.nodes.exec.ExecEdge;
 import org.apache.flink.table.planner.plan.nodes.exec.ExecNodeBase;
 import org.apache.flink.table.planner.plan.nodes.exec.ExecNodeConfig;
@@ -42,6 +43,7 @@ import org.apache.flink.table.planner.plan.nodes.exec.SingleTransformationTransl
 import org.apache.flink.table.planner.plan.nodes.exec.spec.JoinSpec;
 import org.apache.flink.table.planner.plan.nodes.exec.utils.ExecNodeUtil;
 import org.apache.flink.table.planner.plan.utils.JoinUtil;
+import org.apache.flink.table.planner.plan.utils.OperatorType;
 import org.apache.flink.table.planner.plan.utils.SorMergeJoinOperatorUtil;
 import org.apache.flink.table.runtime.generated.GeneratedJoinCondition;
 import org.apache.flink.table.runtime.generated.GeneratedProjection;
@@ -78,7 +80,9 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
         minPlanVersion = FlinkVersion.v2_0,
         minStateVersion = FlinkVersion.v2_0)
 public class BatchExecHashJoin extends ExecNodeBase<RowData>
-        implements BatchExecNode<RowData>, SingleTransformationTranslator<RowData> {
+        implements BatchExecNode<RowData>,
+                SingleTransformationTranslator<RowData>,
+                AdaptiveBroadcastJoinExecNode {
 
     public static final String JOIN_TRANSFORMATION = "join";
     public static final String FIELD_NAME_JOIN_SPEC = "joinSpec";
@@ -89,6 +93,7 @@ public class BatchExecHashJoin extends ExecNodeBase<RowData>
     public static final String FIELD_NAME_ESTIMATED_LEFT_ROW_COUNT = "estimatedLeftRowCount";
     public static final String FIELD_NAME_ESTIMATED_RIGHT_ROW_COUNT = "estimatedRightRowCount";
     public static final String FIELD_NAME_TRY_DISTINCT_BUILD_ROW = "tryDistinctBuildRow";
+    public static final String FIELD_NAME_IS_JOIN_HINT = "withHint";
 
     @JsonProperty(FIELD_NAME_JOIN_SPEC)
     private final JoinSpec joinSpec;
@@ -111,6 +116,9 @@ public class BatchExecHashJoin extends ExecNodeBase<RowData>
     @JsonProperty(FIELD_NAME_ESTIMATED_RIGHT_ROW_COUNT)
     private final long estimatedRightRowCount;
 
+    @JsonProperty(FIELD_NAME_IS_JOIN_HINT)
+    private final boolean withHint;
+
     @JsonProperty(FIELD_NAME_TRY_DISTINCT_BUILD_ROW)
     private final boolean tryDistinctBuildRow;
 
@@ -127,6 +135,7 @@ public class BatchExecHashJoin extends ExecNodeBase<RowData>
             InputProperty leftInputProperty,
             InputProperty rightInputProperty,
             RowType outputType,
+            boolean withHint,
             String description) {
         super(
                 ExecNodeContext.newNodeId(),
@@ -143,6 +152,7 @@ public class BatchExecHashJoin extends ExecNodeBase<RowData>
         this.estimatedLeftRowCount = estimatedLeftRowCount;
         this.estimatedRightRowCount = estimatedRightRowCount;
         this.tryDistinctBuildRow = tryDistinctBuildRow;
+        this.withHint = withHint;
     }
 
     @JsonCreator
@@ -160,7 +170,8 @@ public class BatchExecHashJoin extends ExecNodeBase<RowData>
             @JsonProperty(FIELD_NAME_TRY_DISTINCT_BUILD_ROW) boolean tryDistinctBuildRow,
             @JsonProperty(FIELD_NAME_INPUT_PROPERTIES) List<InputProperty> inputProperties,
             @JsonProperty(FIELD_NAME_OUTPUT_TYPE) RowType outputType,
-            @JsonProperty(FIELD_NAME_DESCRIPTION) String description) {
+            @JsonProperty(FIELD_NAME_DESCRIPTION) String description,
+            @JsonProperty(FIELD_NAME_IS_JOIN_HINT) boolean withHint) {
         super(id, context, persistedConfig, inputProperties, outputType, description);
         checkArgument(inputProperties.size() == 2);
         this.joinSpec = checkNotNull(joinSpec);
@@ -171,6 +182,7 @@ public class BatchExecHashJoin extends ExecNodeBase<RowData>
         this.estimatedLeftRowCount = estimatedLeftRowCount;
         this.estimatedRightRowCount = estimatedRightRowCount;
         this.tryDistinctBuildRow = tryDistinctBuildRow;
+        this.withHint = withHint;
     }
 
     @Override
@@ -276,7 +288,7 @@ public class BatchExecHashJoin extends ExecNodeBase<RowData>
         long externalBufferMemory =
                 config.get(ExecutionConfigOptions.TABLE_EXEC_RESOURCE_EXTERNAL_BUFFER_MEMORY)
                         .getBytes();
-        long managedMemory = getLargeManagedMemory(joinType, config);
+        long managedMemory = JoinUtil.getLargeManagedMemory(joinType, config);
 
         // sort merge join function
         SortMergeJoinFunction sortMergeJoinFunction =
@@ -351,29 +363,6 @@ public class BatchExecHashJoin extends ExecNodeBase<RowData>
                 false);
     }
 
-    private long getLargeManagedMemory(FlinkJoinType joinType, ExecNodeConfig config) {
-        long hashJoinManagedMemory =
-                config.get(ExecutionConfigOptions.TABLE_EXEC_RESOURCE_HASH_JOIN_MEMORY).getBytes();
-
-        // The memory used by SortMergeJoinIterator that buffer the matched rows, each side needs
-        // this memory if it is full outer join
-        long externalBufferMemory =
-                config.get(ExecutionConfigOptions.TABLE_EXEC_RESOURCE_EXTERNAL_BUFFER_MEMORY)
-                        .getBytes();
-        // The memory used by BinaryExternalSorter for sort, the left and right side both need it
-        long sortMemory =
-                config.get(ExecutionConfigOptions.TABLE_EXEC_RESOURCE_SORT_MEMORY).getBytes();
-        int externalBufferNum = 1;
-        if (joinType == FlinkJoinType.FULL) {
-            externalBufferNum = 2;
-        }
-        long sortMergeJoinManagedMemory = externalBufferMemory * externalBufferNum + sortMemory * 2;
-
-        // Due to hash join maybe fallback to sort merge join, so here managed memory choose the
-        // large one
-        return Math.max(hashJoinManagedMemory, sortMergeJoinManagedMemory);
-    }
-
     @Override
     public boolean supportFusionCodegen() {
         RowType leftType = (RowType) getInputEdges().get(0).getOutputType();
@@ -407,7 +396,7 @@ public class BatchExecHashJoin extends ExecNodeBase<RowData>
                 (int)
                         config.get(ExecutionConfigOptions.TABLE_EXEC_SPILL_COMPRESSION_BLOCK_SIZE)
                                 .getBytes();
-        long managedMemory = getLargeManagedMemory(joinSpec.getJoinType(), config);
+        long managedMemory = JoinUtil.getLargeManagedMemory(joinSpec.getJoinType(), config);
         OpFusionCodegenSpecGenerator hashJoinGenerator =
                 new TwoInputOpFusionCodegenSpecGenerator(
                         leftInput,
@@ -431,5 +420,31 @@ public class BatchExecHashJoin extends ExecNodeBase<RowData>
         leftInput.addOutput(1, hashJoinGenerator);
         rightInput.addOutput(2, hashJoinGenerator);
         return hashJoinGenerator;
+    }
+
+    @Override
+    public boolean canBeTransformedToAdaptiveBroadcastJoin() {
+        return !withHint && joinSpec.getJoinType() != FlinkJoinType.FULL;
+    }
+
+    @Override
+    public BatchExecAdaptiveBroadcastJoin toAdaptiveBroadcastJoinNode() {
+        return new BatchExecAdaptiveBroadcastJoin(
+                getPersistedConfig(),
+                joinSpec.getJoinType(),
+                joinSpec.getLeftKeys(),
+                joinSpec.getRightKeys(),
+                joinSpec.getFilterNulls(),
+                estimatedLeftAvgRowSize,
+                estimatedRightAvgRowSize,
+                estimatedLeftRowCount,
+                estimatedRightRowCount,
+                leftIsBuild,
+                tryDistinctBuildRow,
+                getInputProperties(),
+                (RowType) getOutputType(),
+                getDescription(),
+                joinSpec.getNonEquiCondition().orElse(null),
+                OperatorType.ShuffleHashJoin);
     }
 }

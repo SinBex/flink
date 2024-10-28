@@ -57,7 +57,7 @@ public class SortMergeJoinFunction implements Serializable {
 
     private final double externalBufferMemRatio;
     private final FlinkJoinType type;
-    private final boolean leftIsSmaller;
+    private boolean leftIsSmaller;
     private final boolean[] filterNulls;
     private final int maxNumFileHandles;
     private final boolean compressionEnabled;
@@ -559,6 +559,10 @@ public class SortMergeJoinFunction implements Serializable {
                 pool,
                 serializer,
                 false /* we don't use newIterator(int beginRow), so don't need use this optimization*/);
+    }
+
+    public void resetLeftIsSmaller(boolean leftIsSmaller) {
+        this.leftIsSmaller = leftIsSmaller;
     }
 
     private boolean isAllFinished() {
